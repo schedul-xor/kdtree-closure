@@ -60,20 +60,18 @@ ubilabs.KDTree.getC = function(p, i){
  * @return {!number}
  */
 ubilabs.KDTree.chebyshevDistance = function(p1, p2){
-  if (goog.isNull(p1) || goog.isNull(p2)) {
-    return 0;
-  }
+  if (goog.isNull(p1) || goog.isNull(p2)) {return 0;}
   goog.asserts.assertInstanceof(p1, goog.math.Coordinate3);
   goog.asserts.assertInstanceof(p2, goog.math.Coordinate3);
-  var min = -1, abs;
+  var max = -1, abs;
   for (var i = 0; i < 3; i++) {
     abs = ubilabs.KDTree.getC(p1,i) - ubilabs.KDTree.getC(p2,i);
     if (abs < 0) {abs = -abs;}
-    if (min == -1 || min > abs) {
-      min = abs;
+    if (max == -1 || max < abs) {
+      max = abs;
     }
   }
-  return min;
+  return max;
 };
 
 
@@ -160,8 +158,7 @@ ubilabs.KDTree.prototype.insert = function(point) {
   }
 
   var insertNode = this.innerSearch_(point, this.rootNode_, null),
-      newNode,
-      dimIndex;
+      newNode,dimIndex;
 
   newNode = this.allocateNode_();
   newNode.setPoint(point);
@@ -209,10 +206,7 @@ ubilabs.KDTree.prototype.nodeSearch_ = function(point, node) {
  * @return {?ubilabs.KDTreeNode}
  */
 ubilabs.KDTree.prototype.findMax_ = function(node, dimIndex) {
-  var own,
-      leftNode,
-      rightNode,
-      maxNode;
+  var own,leftNode,rightNode,maxNode;
 
   if (goog.isNull(node)) {
     return null;
@@ -250,10 +244,7 @@ ubilabs.KDTree.prototype.findMax_ = function(node, dimIndex) {
  * @return {?ubilabs.KDTreeNode}
  */
 ubilabs.KDTree.prototype.findMin_ = function(node, dimIndex) {
-  var own,
-      leftNode,
-      rightNode,
-      minNode;
+  var own, leftNode, rightNode, minNode;
 
   if (goog.isNull(node)) {
     return null;
@@ -288,13 +279,8 @@ ubilabs.KDTree.prototype.findMin_ = function(node, dimIndex) {
  * @param {?ubilabs.KDTreeNode} node
  */
 ubilabs.KDTree.prototype.removeNode_ = function(node) {
-  if (goog.isNull(node)) {
-    return;
-  }
-
-  var nextNode,
-      nextPoint,
-      parentDimIndex;
+  if (goog.isNull(node)) { return; }
+  var nextNode,nextPoint,parentDimIndex;
 
   if (goog.isNull(node.getLeft()) && goog.isNull(node.getRight())) {
     if (goog.isNull(node.getParent())) {
@@ -348,8 +334,7 @@ ubilabs.KDTree.prototype.remove = function(point) {
  * @param {!Object.<number, Array.<ubilabs.KDTreeNode>>} heapMap
  * @param {!number} desiredCount
  */
-ubilabs.KDTree.prototype.saveNodeToHeap_ =
-    function(node, distance, heap, heapMap, desiredCount) {
+ubilabs.KDTree.prototype.saveNodeToHeap_ = function(node, distance, heap, heapMap, desiredCount) {
   heap.push(distance);
   if (!goog.object.containsKey(heapMap, distance)) {
     heapMap[distance] = [];
@@ -363,22 +348,16 @@ ubilabs.KDTree.prototype.saveNodeToHeap_ =
  * @param {!goog.math.Coordinate3} point
  * @param {?ubilabs.KDTreeNode} node
  * @param {!schedul.pq.Base} heap
- * @param {!Object.<number, Array.<ubilabs.KDTreeNode>>} heapMap
+ * @param {!Object.<!number, !Array.<!ubilabs.KDTreeNode>>} heapMap
  * @param {!number} desiredCount
  */
-ubilabs.KDTree.prototype.nearestSearch_ =
-    function(point, node, heap, heapMap, desiredCount) {
-  if (goog.isNull(node)) {
-    return;
-  }
+ubilabs.KDTree.prototype.nearestSearch_ =function(point, node, heap, heapMap, desiredCount) {
+  if (goog.isNull(node)) {return;}
 
   var bestChild,
       dimIndex = node.getDimIndex(),
       ownDistance = this.metric_(point, node.getPoint()),
-      linearPoint,
-      linearDistance,
-      otherChild,
-      i;
+      linearPoint, otherChild, i;
 
   if (i === node.getDimIndex()) {
     linearPoint = point;
@@ -386,7 +365,7 @@ ubilabs.KDTree.prototype.nearestSearch_ =
     linearPoint = node.getPoint();
   }
 
-  linearDistance = this.metric_(linearPoint, node.getPoint());
+  var linearDistance = this.metric_(linearPoint, node.getPoint());
 
   if (goog.isNull(node.getRight()) && goog.isNull(node.getLeft())) {
     if (heap.size() < desiredCount || ownDistance < heap.peek()) {
@@ -432,17 +411,17 @@ ubilabs.KDTree.prototype.nearestSearch_ =
  * @return {!Array.<!goog.math.Coordinate3>}
  */
 ubilabs.KDTree.prototype.nearest = function(point, desiredCount) {
-  var i,
-      heap = new schedul.pq.Binary(schedul.pq.Base.max),
-      heapMap = {};
+  var heap = new schedul.pq.Binary(schedul.pq.Base.min);
+  var heapMap = {};
 
   this.nearestSearch_(point, this.rootNode_, heap, heapMap, desiredCount);
 
   this.resultVessel_.length = 0;
-  for (i = 0; i < desiredCount; i += 1) {
+  for (var i = 0; i < desiredCount; i += 1) {
     var distance = heap.pop();
-    goog.array.forEach(heapMap[distance], function(point, index) {
-      this.resultVessel_.push(point);
+    goog.array.forEach(heapMap[distance], function(foundNode, index) {
+      var foundPoint = foundNode.getPoint();
+      this.resultVessel_.push(foundPoint);
     }, this);
   }
   return this.resultVessel_;
@@ -458,8 +437,7 @@ ubilabs.KDTree.prototype.height_ = function(node) {
   if (goog.isNull(node)) {
     return 0;
   }
-  return Math.max(this.height_(node.getLeft()),
-                  this.height_(node.getRight())) + 1;
+  return Math.max(this.height_(node.getLeft()),this.height_(node.getRight())) + 1;
 };
 
 
@@ -490,8 +468,7 @@ ubilabs.KDTree.prototype.balanceFactor = function() {
  * @param {!Array.<goog.math.Coordinate3>} targetPoints
  * @param {!number} offset
  * @param {!number} length
- * @param {!function(ubilabs.KDTreeNode, ubilabs.KDTreeNode):number}
- * compareFunction
+ * @param {!function(ubilabs.KDTreeNode, ubilabs.KDTreeNode):number} compareFunction
  */
 ubilabs.KDTree.prototype.partialSort_ =
     function(targetPoints, offset, length, compareFunction) {
@@ -516,11 +493,8 @@ ubilabs.KDTree.prototype.partialSort_ =
  * @param {?ubilabs.KDTreeNode} parent
  * @return {?ubilabs.KDTreeNode}
  */
-ubilabs.KDTree.prototype.buildTree_ =
-    function(points, offset, length, depth, parent) {
-  var dim = depth % this.dimension_,
-      median,
-      node;
+ubilabs.KDTree.prototype.buildTree_ =function(points, offset, length, depth, parent) {
+  var dim = depth % this.dimension_,median, node;
 
   if (length === 0) {
     return null;
@@ -541,10 +515,8 @@ ubilabs.KDTree.prototype.buildTree_ =
   node.setPoint(points[median]);
   node.setDimIndex(dim);
   node.setParent(parent);
-  node.setLeft(this.buildTree_(points,
-      0, median, depth + 1, node));
-  node.setRight(this.buildTree_(points,
-      median + 1, median - 1, depth + 1, node));
+  node.setLeft(this.buildTree_(points,0, median, depth + 1, node));
+  node.setRight(this.buildTree_(points,median + 1, median - 1, depth + 1, node));
 
   return node;
 };
@@ -573,8 +545,7 @@ ubilabs.KDTree.prototype.balance = function() {
   this.balanceBuffer_.length = 0;
   this.savePoints_(this.balanceBuffer_, this.rootNode_); // Fill the points
   this.freeNodeWithChildren_(this.rootNode_);
-  this.rootNode_ = this.buildTree_(this.balanceBuffer_, 0,
-                                   this.balanceBuffer_.length, 0, null);
+  this.rootNode_ = this.buildTree_(this.balanceBuffer_, 0,this.balanceBuffer_.length, 0, null);
 };
 
 
