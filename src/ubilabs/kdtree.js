@@ -2,8 +2,7 @@ goog.provide('ubilabs.KDTree');
 
 goog.require('goog.asserts');
 goog.require('goog.math.Coordinate3');
-goog.require('schedul.pq.Base');
-goog.require('schedul.pq.Binary');
+goog.require('goog.structs.PriorityQueue');
 goog.require('ubilabs.KDTreeNode');
 
 
@@ -330,12 +329,12 @@ ubilabs.KDTree.prototype.remove = function(point) {
  * @private
  * @param {!ubilabs.KDTreeNode} node
  * @param {!number} distance
- * @param {!schedul.pq.Base} heap
+ * @param {!goog.structs.PriorityQueue} heap
  * @param {!Object.<number, Array.<ubilabs.KDTreeNode>>} heapMap
  * @param {!number} desiredCount
  */
 ubilabs.KDTree.prototype.saveNodeToHeap_ = function(node, distance, heap, heapMap, desiredCount) {
-  heap.push(distance);
+  heap.enqueue(distance,distance);
   if (!goog.object.containsKey(heapMap, distance)) {
     heapMap[distance] = [];
   }
@@ -347,7 +346,7 @@ ubilabs.KDTree.prototype.saveNodeToHeap_ = function(node, distance, heap, heapMa
  * @private
  * @param {!goog.math.Coordinate3} point
  * @param {?ubilabs.KDTreeNode} node
- * @param {!schedul.pq.Base} heap
+ * @param {!goog.structs.PriorityQueue} heap
  * @param {!Object.<!number, !Array.<!ubilabs.KDTreeNode>>} heapMap
  * @param {!number} desiredCount
  */
@@ -368,7 +367,7 @@ ubilabs.KDTree.prototype.nearestSearch_ =function(point, node, heap, heapMap, de
   var linearDistance = this.metric_(linearPoint, node.getPoint());
 
   if (goog.isNull(node.getRight()) && goog.isNull(node.getLeft())) {
-    if (heap.size() < desiredCount || ownDistance < heap.peek()) {
+    if (heap.getCount() < desiredCount || ownDistance < heap.peekKey()) {
       this.saveNodeToHeap_(node, ownDistance, heap, heapMap, desiredCount);
     }
     return;
@@ -388,11 +387,11 @@ ubilabs.KDTree.prototype.nearestSearch_ =function(point, node, heap, heapMap, de
 
   this.nearestSearch_(point, bestChild, heap, heapMap, desiredCount);
 
-  if (heap.size() < desiredCount || ownDistance < heap.peek()) {
+  if (heap.getCount() < desiredCount || ownDistance < heap.peekKey()) {
     this.saveNodeToHeap_(node, ownDistance, heap, heapMap, desiredCount);
   }
 
-  if (heap.size() < desiredCount || Math.abs(linearDistance) < heap.peek()) {
+  if (heap.getCount() < desiredCount || Math.abs(linearDistance) < heap.peekKey()) {
     if (bestChild === node.getLeft()) {
       otherChild = node.getRight();
     } else {
@@ -411,14 +410,14 @@ ubilabs.KDTree.prototype.nearestSearch_ =function(point, node, heap, heapMap, de
  * @return {!Array.<!goog.math.Coordinate3>}
  */
 ubilabs.KDTree.prototype.nearest = function(point, desiredCount) {
-  var heap = new schedul.pq.Binary(schedul.pq.Base.min);
+  var heap = new goog.structs.PriorityQueue();
   var heapMap = {};
 
   this.nearestSearch_(point, this.rootNode_, heap, heapMap, desiredCount);
 
   this.resultVessel_.length = 0;
   for (var i = 0; i < desiredCount; i += 1) {
-    var distance = heap.pop();
+    var distance = heap.dequeue();
     goog.array.forEach(heapMap[distance], function(foundNode, index) {
       var foundPoint = foundNode.getPoint();
       this.resultVessel_.push(foundPoint);
