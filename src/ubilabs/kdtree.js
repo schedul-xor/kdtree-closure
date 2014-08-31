@@ -618,6 +618,18 @@ ubilabs.KDTree.prototype.toJSON = function() {
 
 
 /**
+ *
+ */
+ubilabs.KDTree.prototype.clear = function(){
+  this.rootNode = null;
+  this.resultVessel_.length = 0;
+  this.nodePool_.length = 0;
+  this.balanceBuffer_.length = 0;
+  this.pointSortWorkspace_.length = 0;
+};
+
+
+/**
  * @param {!goog.math.Coordinate3} p1
  * @param {!goog.math.Coordinate3} p2
  * @return {!number}
